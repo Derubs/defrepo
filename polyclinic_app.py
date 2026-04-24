@@ -1,19 +1,10 @@
-"""
-ИС «Регистратура» — Поликлиника
-Стек: Python 3 · tkinter · sqlite3
-"""
-
 import tkinter as tk
 from tkinter import ttk, messagebox
 import sqlite3
 import datetime
 
-# ═══════════════════════════════════════════════
 # БАЗА ДАННЫХ
-# ═══════════════════════════════════════════════
 DB = "polyclinic.db"
-
-
 def init_db():
     con = sqlite3.connect(DB)
     cur = con.cursor()
@@ -85,11 +76,8 @@ def init_db():
 
     con.commit()
     con.close()
-
-
-# ═══════════════════════════════════════════════
+    
 # ЦВЕТА / ШРИФТЫ
-# ═══════════════════════════════════════════════
 BG      = "#0f1117"
 PANEL   = "#1a1d27"
 CARD    = "#222536"
@@ -155,10 +143,7 @@ def make_tree(parent, columns, headings, height=12):
     tv.configure(yscrollcommand=sb.set)
     return tv, sb
 
-
-# ═══════════════════════════════════════════════
 # ГЛАВНОЕ ОКНО
-# ═══════════════════════════════════════════════
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -227,10 +212,7 @@ class App(tk.Tk):
                 fg=ACCENT if k == key else TEXT,
             )
 
-
-# ═══════════════════════════════════════════════
 # СТРАНИЦА: ПАЦИЕНТЫ
-# ═══════════════════════════════════════════════
 class PatientsPage(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent, bg=BG)
@@ -334,10 +316,7 @@ class PatientForm(tk.Toplevel):
         self.caller.refresh()
         self.destroy()
 
-
-# ═══════════════════════════════════════════════
 # СТРАНИЦА: ЗАПИСЬ К ВРАЧУ
-# ═══════════════════════════════════════════════
 class AppointmentsPage(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent, bg=BG)
@@ -512,10 +491,7 @@ class ChangeStatusForm(tk.Toplevel):
         self.caller.refresh()
         self.destroy()
 
-
-# ═══════════════════════════════════════════════
 # СТРАНИЦА: ВРАЧИ
-# ═══════════════════════════════════════════════
 class DoctorsPage(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent, bg=BG)
@@ -580,10 +556,7 @@ class DoctorsPage(tk.Frame):
         for r in rows:
             self.atv.insert("", "end", values=r)
 
-
-# ═══════════════════════════════════════════════
 # СТРАНИЦА: ОТЧЁТНОСТЬ
-# ═══════════════════════════════════════════════
 class ReportsPage(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent, bg=BG)
@@ -649,9 +622,6 @@ class ReportsPage(tk.Frame):
         for r in rows:
             self.tv.insert("", "end", values=r)
 
-
-# ═══════════════════════════════════════════════
 # ЗАПУСК
-# ═══════════════════════════════════════════════
 if __name__ == "__main__":
     App().mainloop()

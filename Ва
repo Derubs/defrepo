@@ -1025,4 +1025,119 @@ class DoctorsPage(tk.Frame):
 
         af = tk.Frame(self, bg=BG)
         af.pack(fill="both", expand=True, padx=24, pady=(4, 16))
-        cols2  = ("appt", "patient", "status
+        cols2  = ("appt", "patient", "status")
+        heads2 = ("Дата приёма", "Пациент", "Статус")
+        self.atv, sb2 = make_tree(af, cols2, heads2, height=8)
+        self.atv.column("appt",    width=160)
+        self.atv.column("patient", width=200)
+        self.atv.pack(side="left", fill="both", expand=True)
+        sb2.pack(side="right", fill="y")
+
+        self.tv.bind("<<TreeviewSelect>>", self._on_select)
+
+    def refresh(self):
+        con = sqlite3.connect(DB)
+        rows = con.execute(
+            "SELECT id,full_name,reception_days,specialization,cabinet_number FROM doctors"
+        ).fetchall()
+        con.close()
+        self.tv.delete(*self.tv.get_children())
+        for r in rows:
+            self.tv.insert("", "end", values=r)
+
+    def _on_select(self, *_):
+        sel = self.tv.selection()
+        if not sel:
+            return
+        did = self.tv.item(sel[0])["values"][0]
+        con = sqlite3.connect(DB)
+        rows = con.execute(
+            """SELECT r.appointment_datetime, p.full_name, r.status
+               FROM registry r
+               JOIN patients p ON p.id = r.patient_id
+               WHERE r.doctor_id = ?
+               ORDER BY r.appointment_datetime""",
+            (did,),
+        ).fetchall()
+        con.close()
+        self.atv.delete(*self.atv.get_children())
+        for r in rows:
+            self.atv.insert("", "end", values=r)
+
+
+# ═══════════════════════════════════════════════
+# СТРАНИЦА: ОТЧЁТНОСТЬ
+# ═══════════════════════════════════════════════
+class ReportsPage(tk.Frame):
+    def __init__(self, parent):
+        super().__init__(parent, bg=BG)
+        self._build()
+
+    def _build(self):
+        top = tk.Frame(self, bg=BG)
+        top.pack(fill="x", padx=24, pady=16)
+        lbl_section(top, "Отчётность — листы приёма").pack(side="left")
+        btn(top, "🔄 Обновить", self.refresh).pack(side="right")
+
+        # Сводные счётчики
+        sf = tk.Frame(self, bg=PANEL, padx=20, pady=14)
+        sf.pack(fill="x", padx=24, pady=(0, 12))
+        self._lbl_pat  = tk.Label(sf, bg=PANEL, fg=TEXT,     font=FBODY)
+        self._lbl_doc  = tk.Label(sf, bg=PANEL, fg=TEXT,     font=FBODY)
+        self._lbl_card = tk.Label(sf, bg=PANEL, fg=TEXT,     font=FBODY)
+        self._lbl_act  = tk.Label(sf, bg=PANEL, fg=SUCCESS,  font=FBODY)
+        self._lbl_comp = tk.Label(sf, bg=PANEL, fg=MUTED,    font=FBODY)
+        for lbl in (self._lbl_pat, self._lbl_doc, self._lbl_card,
+                    self._lbl_act, self._lbl_comp):
+            lbl.pack(side="left", padx=20)
+
+        # Таблица по врачам
+        tf = tk.Frame(self, bg=BG)
+        tf.pack(fill="both", expand=True, padx=24, pady=(0, 16))
+        cols  = ("doctor", "spec", "cabinet", "total", "active", "completed", "cancelled")
+        heads = ("Врач", "Специализация", "Каб.", "Всего", "Актив.", "Завер.", "Отменено")
+        self.tv, sb = make_tree(tf, cols, heads, height=16)
+        self.tv.column("doctor", width=200)
+        self.tv.column("spec",   width=140)
+        self.tv.pack(side="left", fill="both", expand=True)
+        sb.pack(side="right", fill="y")
+
+    def refresh(self):
+        con = sqlite3.connect(DB)
+        n_pat  = con.execute("SELECT COUNT(*) FROM patients").fetchone()[0]
+        n_doc  = con.execute("SELECT COUNT(*) FROM doctors").fetchone()[0]
+        n_card = con.execute("SELECT COUNT(*) FROM medcards").fetchone()[0]
+        n_act  = con.execute("SELECT COUNT(*) FROM registry WHERE status='active'").fetchone()[0]
+        n_comp = con.execute("SELECT COUNT(*) FROM registry WHERE status='completed'").fetchone()[0]
+
+        self._lbl_pat.configure(text=f"👤 Пациентов: {n_pat}")
+        self._lbl_doc.configure(text=f"🩺 Врачей: {n_doc}")
+        self._lbl_card.configure(text=f"📁 Медкарт: {n_card}")
+        self._lbl_act.configure(text=f"✅ Активных: {n_act}")
+        self._lbl_comp.configure(text=f"🔘 Завершённых: {n_comp}")
+
+        rows = con.execute("""
+            SELECT d.full_name,
+                   d.specialization,
+                   d.cabinet_number,
+                   COUNT(r.id),
+                   SUM(CASE WHEN r.status='active'    THEN 1 ELSE 0 END),
+                   SUM(CASE WHEN r.status='completed' THEN 1 ELSE 0 END),
+                   SUM(CASE WHEN r.status='cancelled' THEN 1 ELSE 0 END)
+            FROM doctors d
+            LEFT JOIN registry r ON r.doctor_id = d.id
+            GROUP BY d.id
+            ORDER BY d.full_name
+        """).fetchall()
+        con.close()
+
+        self.tv.delete(*self.tv.get_children())
+        for r in rows:
+            self.tv.insert("", "end", values=r)
+
+
+# ═══════════════════════════════════════════════
+# ЗАПУСК
+# ═══════════════════════════════════════════════
+if __name__ == "__main__":
+    App().mainloop()
